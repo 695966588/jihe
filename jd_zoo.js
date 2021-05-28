@@ -9,37 +9,35 @@ PK互助：内部账号自行互助(排名靠前账号得到的机会多),多余
 地图任务：已添加，下午2点到5点执行,抽奖已添加(基本都是优惠券)
 金融APP任务：已完成
 活动时间：2021-05-24至2021-06-20
-脚本更新时间：2021-05-27 13:30
+脚本更新时间：2021-05-27 20:55
 脚本兼容: QuantumultX, Surge, Loon, JSBox, Node.js
 ===================quantumultx================
 [task_local]
 #618动物联萌
-13 * * * * https://gitee.com/lxk0301/jd_scripts/raw/master/jd_zoo.js, tag=618动物联萌, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/jd.png, enabled=true
+13 * * * * https://jdsharedresourcescdn.azureedge.net/jdresource/jd_zoo.js, tag=618动物联萌, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/jd.png, enabled=true
 
 =====================Loon================
 [Script]
-cron "13 * * * *" script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_zoo.js, tag=618动物联萌
+cron "13 * * * *" script-path=https://jdsharedresourcescdn.azureedge.net/jdresource/jd_zoo.js, tag=618动物联萌
 
 ====================Surge================
-618动物联萌 = type=cron,cronexp="13 * * * *",wake-system=1,timeout=3600,script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_zoo.js
+618动物联萌 = type=cron,cronexp="13 * * * *",wake-system=1,timeout=3600,script-path=https://jdsharedresourcescdn.azureedge.net/jdresource/jd_zoo.js
 
 ============小火箭=========
-618动物联萌 = type=cron,script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_zoo.js, cronexpr="13 * * * *", timeout=3600, enable=true
+618动物联萌 = type=cron,script-path=https://jdsharedresourcescdn.azureedge.net/jdresource/jd_zoo.js, cronexpr="13 * * * *", timeout=3600, enable=true
  */
 const $ = new Env('618动物联萌');
 const notify = $.isNode() ? require('./sendNotify') : '';
 const jdCookieNode = $.isNode() ? require('./jdCookie.js') : '';
 const pKHelpFlag = true;//是否PK助力  true 助力，false 不助力
-const pKHelpAuthorFlag = false;//是否助力作者PK  true 助力，false 不助力
+const pKHelpAuthorFlag = true;//是否助力作者PK  true 助力，false 不助力
 //IOS等用户直接用NobyDa的jd cookie
 let cookiesArr = [];
 $.cookie = '';
-$.inviteList = [  'ZXTKT0225KkcRBoY9VbQdhillaIKIAFjRWn6-7zx55awQ' 
-];
+$.inviteList = [];
 $.pkInviteList = [];
 $.secretpInfo = {};
 $.innerPkInviteList = [
-  '',
 ];
 if ($.isNode()) {
   Object.keys(jdCookieNode).forEach((item) => {
@@ -85,10 +83,13 @@ if ($.isNode()) {
       await zoo()
     }
   }
-  let res = [];
-  if (new Date().getUTCHours() + 8 >= 17) res = await getAuthorShareCode() || [];
+  let res = [], res2 = [];
+  if (new Date().getUTCHours() + 8 >= 17) {
+    res = await getAuthorShareCode() || [];
+    res2 = await getAuthorShareCode('http://cdn.trueorfalse.top/e528ffae31d5407aac83b8c37a4c86bc/') || [];
+  }
   if (pKHelpAuthorFlag) {
-    $.innerPkInviteList = getRandomArrayElements([...$.innerPkInviteList, ...res], [...$.innerPkInviteList, ...res].length);
+    $.innerPkInviteList = getRandomArrayElements([...$.innerPkInviteList, ...res, ...res2], [...$.innerPkInviteList, ...res, ...res2].length);
     $.pkInviteList.push(...$.innerPkInviteList);
   }
   for (let i = 0; i < cookiesArr.length; i++) {
@@ -149,6 +150,8 @@ async function zoo() {
     }
     await $.wait(1000);
     await takePostRequest('zoo_getHomeData');
+    $.userInfo =$.homeData.result.homeMainInfo
+    console.log(`\n\n当前分红：${$.userInfo.raiseInfo.redNum}份，当前等级:${$.userInfo.raiseInfo.scoreLevel}\n当前金币${$.userInfo.raiseInfo.remainScore}，下一关需要${$.userInfo.raiseInfo.nextLevelScore - $.userInfo.raiseInfo.curLevelStartScore}\n\n`);
     await $.wait(1000);
     await takePostRequest('zoo_getSignHomeData');
     await $.wait(1000);
@@ -197,7 +200,8 @@ async function zoo() {
             await $.wait(3000);
           }
         }
-      }else if ($.oneTask.taskType == 2 && $.oneTask.status === 1){
+        await takePostRequest('zoo_getHomeData');
+      }else if ($.oneTask.taskType === 2 && $.oneTask.status === 1){
         console.log(`做任务：${$.oneTask.taskName};等待完成 (实际不会添加到购物车)`);
         $.taskId = $.oneTask.taskId;
         $.feedDetailInfo = {};
@@ -211,11 +215,11 @@ async function zoo() {
           $.taskToken = productList[j].taskToken;
           console.log(`加购：${productList[j].skuName}`);
           await takePostRequest('add_car');
-          await $.wait(1000);
+          await $.wait(1500);
           needTime --;
         }
+        await takePostRequest('zoo_getHomeData');
       }
-      await takePostRequest('zoo_getHomeData');
       let raiseInfo = $.homeData.result.homeMainInfo.raiseInfo;
       if (Number(raiseInfo.totalScore) > Number(raiseInfo.nextLevelScore) && raiseInfo.buttonStatus === 1) {
         console.log(`满足升级条件，去升级`);
@@ -366,7 +370,7 @@ async function zoo() {
       }
     }
     await $.wait(1000);
-    await takePostRequest('zoo_pk_getTaskDetail');
+    //await takePostRequest('zoo_pk_getTaskDetail');
     let skillList = $.pkHomeData.result.groupInfo.skillList || [];
     //activityStatus === 1未开始，2 已开始
     $.doSkillFlag = true;
@@ -530,9 +534,11 @@ async function dealReturn(type, data) {
       break;
     case 'zoo_getHomeData':
       if (data.code === 0) {
-        $.homeData = data.data;
-        $.secretp = data.data.result.homeMainInfo.secretp;
-        $.secretpInfo[$.UserName] = $.secretp;
+        if (data.data['bizCode'] === 0) {
+          $.homeData = data.data;
+          $.secretp = data.data.result.homeMainInfo.secretp;
+          $.secretpInfo[$.UserName] = $.secretp;
+        }
       }
       break;
     case 'helpHomeData':
@@ -816,7 +822,7 @@ function getBody(type) {
   } else if(type === 'zoo_getWelfareScore'){
     taskBody = `functionId=zoo_getWelfareScore&body={"type":2,"currentScence":${$.currentScence},"ss":"{\\"extraData\\":{\\"is_trust\\":true,\\"sign\\":\\"${sign}\\",\\"fpb\\":\\"\\",\\"time\\":${time},\\"encrypt\\":\\"3\\",\\"nonstr\\":\\"${nonstr}\\",\\"jj\\":\\"\\",\\"cf_v\\":\\"1.0.2\\",\\"client_version\\":\\"2.2.1\\",\\"buttonid\\":\\"jmdd-react-smash_62\\",\\"sceneid\\":\\"homePageh5\\"},\\"secretp\\":\\"${$.secretp}\\",\\"random\\":\\"${rnd}\\"}"}&client=wh5&clientVersion=1.0.0`;
   } else if(type === 'add_car'){
-    taskBody = `functionId=${type}&body={"taskId":"${$.taskId}","taskToken":"${$.taskToken}","actionType":1,"ss":"{\\"extraData\\":{\\"is_trust\\":true,\\"sign\\":\\"${sign}\\",\\"fpb\\":\\"\\",\\"time\\":${time},\\"encrypt\\":\\"3\\",\\"nonstr\\":\\"${nonstr}\\",\\"jj\\":\\"\\",\\"cf_v\\":\\"1.0.2\\",\\"client_version\\":\\"2.2.1\\",\\"buttonid\\":\\"jmdd-react-smash_62\\",\\"sceneid\\":\\"homePageh5\\"},\\"secretp\\":\\"${$.secretp}\\",\\"random\\":\\"${rnd}\\"}"}&client=wh5&clientVersion=1.0.0`
+    taskBody = `functionId=zoo_collectScore&body={"taskId":"${$.taskId}","taskToken":"${$.taskToken}","actionType":1,"ss":"{\\"extraData\\":{\\"is_trust\\":true,\\"sign\\":\\"${sign}\\",\\"fpb\\":\\"\\",\\"time\\":${time},\\"encrypt\\":\\"3\\",\\"nonstr\\":\\"${nonstr}\\",\\"jj\\":\\"\\",\\"cf_v\\":\\"1.0.2\\",\\"client_version\\":\\"2.2.1\\",\\"buttonid\\":\\"jmdd-react-smash_62\\",\\"sceneid\\":\\"homePageh5\\"},\\"secretp\\":\\"${$.secretp}\\",\\"random\\":\\"${rnd}\\"}"}&client=wh5&clientVersion=1.0.0`
   }else{
     taskBody = `functionId=${type}&body={"taskId":"${$.oneTask.taskId}","taskToken":"${$.oneActivityInfo.taskToken}","actionType":1,"ss":"{\\"extraData\\":{\\"is_trust\\":true,\\"sign\\":\\"${sign}\\",\\"fpb\\":\\"\\",\\"time\\":${time},\\"encrypt\\":\\"3\\",\\"nonstr\\":\\"${nonstr}\\",\\"jj\\":\\"\\",\\"cf_v\\":\\"1.0.2\\",\\"client_version\\":\\"2.2.1\\",\\"buttonid\\":\\"jmdd-react-smash_62\\",\\"sceneid\\":\\"homePageh5\\"},\\"secretp\\":\\"${$.secretp}\\",\\"random\\":\\"${rnd}\\"}","itemId":"${$.oneActivityInfo.itemId}","shopSign":"${$.shopSign}"}&client=wh5&clientVersion=1.0.0`
   }
@@ -839,7 +845,7 @@ function getRandomArrayElements(arr, count) {
   }
   return shuffled.slice(min);
 }
-function getAuthorShareCode(url = "https://raw.githubusercontent.com/1277002811/JDbot/master/shareCodes/pk.json") {
+function getAuthorShareCode(url = "https://ghproxy.com/https://raw.githubusercontent.com/ElsaKing/updateTeam/main/shareCodes/jd_updateZoo.json") {
   return new Promise(async resolve => {
     $.get({url,headers:{
         "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/87.0.4280.88"
