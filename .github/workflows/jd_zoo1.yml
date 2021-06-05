@@ -6,7 +6,7 @@ name: 「活动」动物联萌1
 on:
   workflow_dispatch:
   schedule:
-    - cron: '18 * * * *'
+    - cron: '18 6-12/1 * * *'
   repository_dispatch:
     types: jd_zoo1
 jobs:
